@@ -8,6 +8,10 @@
 
 include 'model.php';
 
+$db = connect_db('localhost', 'ddwt18_week1', 'ddwt18','ddwt18');
+
+$counted_series = count_series($db);
+
 /* Landing page */
 if (new_route('/DDWT18/week1/', 'get')) {
     /* Page info */
@@ -35,6 +39,8 @@ if (new_route('/DDWT18/week1/', 'get')) {
 /* Overview page */
 elseif (new_route('/DDWT18/week1/overview/', 'get')) {
     /* Page info */
+    $series = get_series($db);
+    $series = get_serie_table($series);
     $page_title = 'Overview';
     $breadcrumbs = get_breadcrumbs([
         'DDWT18' => na('/DDWT18/', False),
@@ -51,27 +57,7 @@ elseif (new_route('/DDWT18/week1/overview/', 'get')) {
     $right_column = use_template('cards');
     $page_subtitle = 'The overview of all series';
     $page_content = 'Here you find all series listed on Series Overview.';
-    $left_content = '
-    <table class="table table-hover">
-        <thead>
-        <tr>
-            <th scope="col">Series</th>
-            <th scope="col"></th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr>
-            <th scope="row">House of Cards</th>
-            <td><a href="/DDWT18/week1/serie/" role="button" class="btn btn-primary">More info</a></td>
-        </tr>
-
-        <tr>
-            <th scope="row">Game of Thrones</th>
-            <td><a href="/DDWT18/week1/serie/" role="button" class="btn btn-primary">More info</a></td>
-        </tr>
-
-        </tbody>
-    </table>';
+    $left_content = $series;
 
     /* Choose Template */
     include use_template('main');
@@ -80,10 +66,12 @@ elseif (new_route('/DDWT18/week1/overview/', 'get')) {
 /* Single Serie */
 elseif (new_route('/DDWT18/week1/serie/', 'get')) {
     /* Get series from db */
-    $serie_name = 'House of Cards';
-    $serie_abstract = 'A Congressman works with his equally conniving wife to exact revenge on the people who betrayed him.';
-    $nbr_seasons = '6';
-    $creators = 'Beau Willimon';
+    $serie_id = $_GET['serie_id'];
+    $serie_info_exp = get_series_info($db, $serie_id);
+    $serie_name = $serie_info_exp['name'];
+    $serie_abstract = $serie_info_exp['abstract'];
+    $nbr_seasons = $serie_info_exp['seasons'];
+    $creators = $serie_info_exp['creator'];
 
     /* Page info */
     $page_title = $serie_name;
@@ -156,16 +144,26 @@ elseif (new_route('/DDWT18/week1/add/', 'post')) {
     $submit_btn = "Add Series";
     $form_action = '/DDWT18/week1/add/';
 
+    $name = $_POST['inputName'];
+    $creator = $_POST['inputCreator'];
+    $seasons = $_POST['inputSeasons'];
+    $abstract = $_POST['inputAbstract'];
+    $serie_info = array("Name"=> $name, "Creator"=> $creator, "Seasons"=> $seasons, "Abstract"=> $abstract);
+    $message = add_series($serie_info, $db);
+    $error_msg = get_error($message);
     include use_template('new');
 }
 
 /* Edit serie GET */
 elseif (new_route('/DDWT18/week1/edit/', 'get')) {
     /* Get serie info from db */
-    $serie_name = 'House of Cards';
-    $serie_abstract = 'A Congressman works with his equally conniving wife to exact revenge on the people who betrayed him.';
-    $nbr_seasons = '6';
-    $creators = 'Beau Willimon';
+    $serie_id =$_GET['serie_id'];
+    $series_info = get_series_info($db, $serie_id);
+
+    $serie_name = $series_info['name'];
+    $serie_abstract = $series_info['abstract'];
+    $nbr_seasons = $series_info['seasons'];
+    $creators = $series_info['creator'];
 
     /* Page info */
     $page_title = 'Edit Series';
@@ -184,6 +182,8 @@ elseif (new_route('/DDWT18/week1/edit/', 'get')) {
     $right_column = use_template('cards');
     $page_subtitle = sprintf("Edit %s", $serie_name);
     $page_content = 'Edit the series below.';
+    $form_action = '/DDWT18/week1/edit/';
+    $submit_btn = "Edit Series";
 
     /* Choose Template */
     include use_template('new');
@@ -191,14 +191,25 @@ elseif (new_route('/DDWT18/week1/edit/', 'get')) {
 
 /* Edit serie POST */
 elseif (new_route('/DDWT18/week1/edit/', 'post')) {
+    $serie_id = $_POST['inputId'];
+    $name = $_POST['inputName'];
+    $creator = $_POST['inputCreator'];
+    $seasons = $_POST['inputSeasons'];
+    $abstract = $_POST['inputAbstract'];
+    $update_serie = array("Name"=> $name, "Creator"=> $creator, "Seasons"=> $seasons, "Abstract"=> $abstract, "serie_id"=> $serie_id);
+    $message = update_series($update_serie, $db);
+    $error_msg = get_error($message);
+
+    $series_info = get_series_info($db, $serie_id);
+
     /* Get serie info from db */
-    $serie_name = 'House of Cards';
-    $serie_abstract = 'A Congressman works with his equally conniving wife to exact revenge on the people who betrayed him.';
-    $nbr_seasons = '6';
-    $creators = 'Beau Willimon';
+    $serie_name = $series_info['name'];
+    $serie_abstract = $series_info['abstract'];
+    $nbr_seasons = $series_info['seasons'];
+    $creators = $series_info['creator'];
 
     /* Page info */
-    $page_title = $serie_info['name'];
+    $page_title = $series_info['name'];
     $breadcrumbs = get_breadcrumbs([
         'DDWT18' => na('/DDWT18/', False),
         'Week 1' => na('/DDWT18/week1/', False),
@@ -214,7 +225,9 @@ elseif (new_route('/DDWT18/week1/edit/', 'post')) {
     /* Page content */
     $right_column = use_template('cards');
     $page_subtitle = sprintf("Information about %s", $serie_name);
-    $page_content = $serie_info['abstract'];
+    $page_content = $series_info['abstract'];
+
+
 
     /* Choose Template */
     include use_template('serie');
@@ -226,6 +239,8 @@ elseif (new_route('/DDWT18/week1/remove/', 'post')) {
     $serie_id = $_POST['serie_id'];
     $feedback = remove_serie($db, $serie_id);
     $error_msg = get_error($feedback);
+    $series = get_series($db);
+    $series = get_serie_table($series);
 
     /* Page info */
     $page_title = 'Overview';
@@ -244,27 +259,7 @@ elseif (new_route('/DDWT18/week1/remove/', 'post')) {
     $right_column = use_template('cards');
     $page_subtitle = 'The overview of all series';
     $page_content = 'Here you find all series listed on Series Overview.';
-    $left_content = '
-    <table class="table table-hover">
-        <thead>
-        <tr>
-            <th scope="col">Series</th>
-            <th scope="col"></th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr>
-            <th scope="row">House of Cards</th>
-            <td><a href="/DDWT18/week1/serie/" role="button" class="btn btn-primary">More info</a></td>
-        </tr>
-
-        <tr>
-            <th scope="row">Game of Thrones</th>
-            <td><a href="/DDWT18/week1/serie/" role="button" class="btn btn-primary">More info</a></td>
-        </tr>
-
-        </tbody>
-    </table>';
+    $left_content = $series;
 
     /* Choose Template */
     include use_template('main');

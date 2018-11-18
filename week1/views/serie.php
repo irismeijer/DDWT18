@@ -47,13 +47,14 @@
                     </table>
                     <div class="row">
                         <div class="col-sm-2">
-                            <a href="/DDWT18/week1/edit/" role="button" class="btn btn-warning">Edit</a>
+                            <a href="/DDWT18/week1/edit/?serie_id=<?= $serie_id ?>" role="button" class="btn btn-warning">Edit</a>
                         </div>
                         <div class="col-sm-2">
                             <form action="/DDWT18/week1/remove/" method="POST">
                                 <input type="hidden" value="<?= $serie_id ?>" name="serie_id">
                                 <button type="submit" class="btn btn-danger">Remove</button>
                             </form>
+
                         </div>
                     </div>
 
