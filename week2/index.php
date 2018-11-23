@@ -13,6 +13,7 @@ $db = connect_db('localhost', 'ddwt18_week2', 'ddwt18','ddwt18');
 
 /* global variables */
 $nbr_series = count_series($db);
+$nbr_users = count_users($db);
 $right_column = use_template('cards');
 $template = Array(
     1 => Array('name' => 'Home','url' => '/DDWT18/week2/'),
@@ -46,8 +47,11 @@ if (new_route('/DDWT18/week2/', 'get')) {
 
 /* Overview page */
 elseif (new_route('/DDWT18/week2/overview/', 'get')) {
+    /* Get error message from remove POST route */
+    if (isset($_GET['error_msg'])){
+        $error_msg = get_error($_GET['error_msg']);
+    }
     /* Get Number of Series */
-    $nbr_series = count_series($db);
     $active_id = 2;
 
     /* Page info */
@@ -71,12 +75,10 @@ elseif (new_route('/DDWT18/week2/overview/', 'get')) {
 
 /* Single Serie */
 elseif (new_route('/DDWT18/week2/serie/', 'get')) {
-    /* Get Number of Series */
-    $nbr_series = count_series($db);
-
     /* Get series from db */
     $serie_id = $_GET['serie_id'];
     $serie_info = get_serieinfo($db, $serie_id);
+    $added_by = get_name($db,$serie_info['user']);
 
     /* Page info */
     $active_id = 2;
@@ -105,8 +107,6 @@ elseif (new_route('/DDWT18/week2/add/', 'get')) {
     if(isset($_GET['error_msg'])){
         $error_msg = get_error($_GET['error_msg']);
     }
-    /* Get Number of Series */
-    $nbr_series = count_series($db);
 
     /* Page info */
     $active_id = 3;
@@ -137,8 +137,10 @@ elseif (new_route('/DDWT18/week2/add/', 'post')) {
 
 /* Edit serie GET */
 elseif (new_route('/DDWT18/week2/edit/', 'get')) {
-    /* Get Number of Series */
-    $nbr_series = count_series($db);
+    /* Get error message from edit POST route */
+    if (isset($_GET['error_msg'])){
+        $error_msg = get_error($_GET['error_msg']);
+    }
 
     /* Get serie info from db */
     $serie_id = $_GET['serie_id'];
@@ -165,65 +167,19 @@ elseif (new_route('/DDWT18/week2/edit/', 'get')) {
 
 /* Edit serie POST */
 elseif (new_route('/DDWT18/week2/edit/', 'post')) {
-    /* Get Number of Series */
-    $nbr_series = count_series($db);
-
-    /* Update serie in database */
     $feedback = update_serie($db, $_POST);
-    $error_msg = get_error($feedback);
-
-    /* Get serie info from db */
+    /* Redirect to serie GET route */
     $serie_id = $_POST['serie_id'];
-    $serie_info = get_serieinfo($db, $serie_id);
-
-    /* Page info */
-    $active_id = 0;
-    $page_title = $serie_info['name'];
-    $breadcrumbs = get_breadcrumbs([
-        'DDWT18' => na('/DDWT18/', False),
-        'Week 2' => na('/DDWT18/week2/', False),
-        'Overview' => na('/DDWT18/week2/overview/', False),
-        $serie_info['name'] => na('/DDWT18/week2/serie/?serie_id='.$serie_id, True)
-    ]);
-    $navigation = get_navigation($template, $active_id);
-
-    /* Page content */
-    $page_subtitle = sprintf("Information about %s", $serie_info['name']);
-    $page_content = $serie_info['abstract'];
-    $nbr_seasons = $serie_info['seasons'];
-    $creators = $serie_info['creator'];
-
-    /* Choose Template */
-    include use_template('serie');
+    $error_msg = json_encode($feedback);
+    redirect(sprintf('/DDWT18/week2/edit/?serie_id='.$serie_id.'/?error_msg=%s', $error_msg));
 }
 
 /* Remove serie */
 elseif (new_route('/DDWT18/week2/remove/', 'post')) {
-    /* Get Number of Series */
-    $nbr_series = count_series($db);
 
-    /* Remove serie in database */
-    $serie_id = $_POST['serie_id'];
-    $feedback = remove_serie($db, $serie_id);
-    $error_msg = get_error($feedback);
-
-    /* Page info */
-    $active_id = 2;
-    $page_title = 'Overview';
-    $breadcrumbs = get_breadcrumbs([
-        'DDWT18' => na('/DDWT18/', False),
-        'Week 2' => na('/DDWT18/week2/', False),
-        'Overview' => na('/DDWT18/week2/overview', True)
-    ]);
-    $navigation = get_navigation($template, $active_id);
-
-    /* Page content */
-    $page_subtitle = 'The overview of all series';
-    $page_content = 'Here you find all series listed on Series Overview.';
-    $left_content = get_serie_table($db, get_series($db));
-
-    /* Choose Template */
-    include use_template('main');
+    $feedback = remove_serie($db, $_POST['serie_id']);
+    /* Redirect to serie GET route */
+    redirect(sprintf('/DDWT18/week2/overview/?error_msg=%s', json_encode($feedback)));
 }
 
 else {

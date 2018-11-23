@@ -430,3 +430,16 @@ function get_name($pdo, $user_id){
     $username = $userinfo['firstname'] . ' ' . $userinfo['lastname'];
     return $username;
 }
+
+/**
+ * Count the number of series listed on Series Overview
+ * @param $pdo
+ * @return mixed
+ */
+function count_users($pdo){
+    /* Get users */
+    $stmt = $pdo->prepare('SELECT * FROM users');
+    $stmt->execute();
+    $users = $stmt->rowCount();
+    return $users;
+}
