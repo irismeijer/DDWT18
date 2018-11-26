@@ -46,11 +46,11 @@
                         </div>
                         <div class="form-group">
                             <label for="inputUsername">First name</label>
-                            <input type="text" class="form-control" id="inputUsername" placeholder="Jan" name="firstname" required>
+                            <input type="text" class="form-control" id="inputFirstname" placeholder="Jan" name="firstname" required>
                         </div>
                         <div class="form-group">
                             <label for="inputUsername">Last name</label>
-                            <input type="text" class="form-control" id="inputUsername" placeholder="Jansen" name="lastname" required>
+                            <input type="text" class="form-control" id="inputLastname" placeholder="Jansen" name="lastname" required>
                         </div>
                         <button type="submit" class="btn btn-primary">Register now</button>
                     </form>

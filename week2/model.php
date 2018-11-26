@@ -262,12 +262,13 @@ function add_serie($pdo, $serie_info){
     }
 
     /* Add Serie */
-    $stmt = $pdo->prepare("INSERT INTO series (name, creator, seasons, abstract) VALUES (?, ?, ?, ?)");
+    $stmt = $pdo->prepare("INSERT INTO series (name, creator, seasons, abstract, user) VALUES (?, ?, ?, ?,?)");
     $stmt->execute([
         $serie_info['Name'],
         $serie_info['Creator'],
         $serie_info['Seasons'],
-        $serie_info['Abstract']
+        $serie_info['Abstract'],
+        $_SESSION['user_id']
     ]);
     $inserted = $stmt->rowCount();
     if ($inserted ==  1) {
@@ -291,6 +292,7 @@ function add_serie($pdo, $serie_info){
  * @return array
  */
 function update_serie($pdo, $serie_info){
+
     /* Check if all fields are set */
     if (
         empty($serie_info['Name']) or
@@ -302,6 +304,15 @@ function update_serie($pdo, $serie_info){
         return [
             'type' => 'danger',
             'message' => 'There was an error. Not all fields were filled in.'
+        ];
+    }
+
+    /* Checks if creator of the serie is the same as the logged in user */
+    $info = get_serieinfo($pdo, $serie_info['serie_id']);
+    if (!($_SESSION['user_id'] == $info['user'])){
+        return [
+            'type' => 'danger',
+            'message' => 'You do not have the rights to change this serie'
         ];
     }
 
@@ -331,12 +342,13 @@ function update_serie($pdo, $serie_info){
     }
 
     /* Update Serie */
-    $stmt = $pdo->prepare("UPDATE series SET name = ?, creator = ?, seasons = ?, abstract = ? WHERE id = ?");
+    $stmt = $pdo->prepare("UPDATE series SET name = ?, creator = ?, seasons = ?, abstract = ?, user = ? WHERE id = ?");
     $stmt->execute([
         $serie_info['Name'],
         $serie_info['Creator'],
         $serie_info['Seasons'],
         $serie_info['Abstract'],
+        $_SESSION['user_id'],
         $serie_info['serie_id']
     ]);
     $updated = $stmt->rowCount();
@@ -361,6 +373,14 @@ function update_serie($pdo, $serie_info){
  * @return array
  */
 function remove_serie($pdo, $serie_id){
+    /* Checks if creator of the serie is the same as the logged in user */
+    $info = get_serieinfo($pdo, $serie_id);
+    if (!($_SESSION['user_id'] == $info['user'])){
+        return [
+            'type' => 'danger',
+            'message' => 'You do not have the rights to remove this serie'
+        ];
+    }
     /* Get series info */
     $serie_info = get_serieinfo($pdo, $serie_id);
 
@@ -442,4 +462,160 @@ function count_users($pdo){
     $stmt->execute();
     $users = $stmt->rowCount();
     return $users;
+}
+
+
+/**
+ * Adds a new user to the database
+ * @param $pdo
+ * @param $form_data
+ * @return array
+ */
+function register_user($pdo, $form_data){
+    if (
+        empty($form_data['username']) or
+        empty($form_data['password']) or
+        empty($form_data['firstname']) or
+        empty($form_data['lastname'])
+    ) {
+        return [
+            'type' => 'danger',
+            'message' => 'You should enter a username, password, first- and last name.'
+        ];
+    }
+
+    try {
+        $stmt = $pdo->prepare('SELECT * FROM users WHERE username = ?');
+        $stmt->execute([$form_data['username']]);
+        $user_exists = $stmt->rowCount();
+    } catch (\PDOException $e) {
+        return [
+            'type' => 'danger',
+            'message' => sprintf('There was an error: %s', $e->getMessage())
+        ];
+    }
+    /* Return error message for existing username */
+    if ( !empty($user_exists) ) {
+        return [
+            'type' => 'danger',
+            'message' => 'The username you entered does already exists!'
+        ];
+    }
+
+    $password = password_hash($form_data['password'], PASSWORD_DEFAULT);
+    /* Save user to the database */
+    try {
+        $stmt = $pdo->prepare('INSERT INTO users (username, password, firstname, lastname) VALUES (?, ?, ?, ?)');
+        $stmt->execute([
+            $form_data['username'],
+            $password,
+            $form_data['firstname'],
+            $form_data['lastname']
+        ]);
+        $user_id = $pdo->lastInsertId();
+
+    } catch (PDOException $e) {
+        return [
+            'type' => 'danger',
+            'message' => sprintf('There was an error: %s', $e->getMessage())
+        ];
+    }
+    /* Login user and redirect */
+    session_start();
+    $_SESSION['user_id'] = $user_id;
+    $feedback = [
+        'type' => 'success',
+        'message' => sprintf('%s, your account was successfully created!', get_name($pdo, $_SESSION['user_id']))
+    ];
+    redirect(sprintf('/DDWT18/week2/myaccount/?error_msg=%s', json_encode($feedback)));
+
+}
+
+/**
+ * Starts a session based on login information of a user
+ * @param $pdo
+ * @param $form_data
+ * @return array
+ */
+function login_user($pdo, $form_data){
+    /* Check if all fields are set */
+    if (
+        empty($form_data['username']) or
+        empty($form_data['password'])
+    ) {
+        return [
+            'type' => 'danger',
+            'message' => 'You should enter a username and password.'
+        ];
+    }
+
+    /* Check if user exists */
+    try {
+        $stmt = $pdo->prepare('SELECT * FROM users WHERE username = ?');
+        $stmt->execute([$form_data['username']]);
+        $user_info = $stmt->fetch();
+    } catch (\PDOException $e) {
+        return [
+            'type' => 'danger',
+            'message' => sprintf('There was an error: %s', $e->getMessage())
+        ];
+    }
+    /* Return error message for wrong username */
+    if ( empty($user_info) ) {
+        return [
+            'type' => 'danger',
+            'message' => 'The username you entered does not exist!'
+        ];
+    }
+
+    /* Check password */
+    if ( !password_verify($form_data['password'], $user_info['password']) ){
+        return [
+            'type' => 'danger',
+            'message' => 'The password you entered is incorrect!'
+        ];
+    } else {
+        session_start();
+        $_SESSION['user_id'] = $user_info['id'];
+        $feedback = [
+            'type' => 'success',
+            'message' => sprintf('%s, you were logged in successfully!',
+                get_name($pdo, $_SESSION['user_id']))
+        ];
+        redirect(sprintf('/DDWT18/week2/myaccount/?error_msg=%s',
+            json_encode($feedback)));
+    }
+
+}
+
+/**
+ * Checks if user is logged in
+ * @return bool
+ */
+function check_login(){
+    session_start();
+    if (isset($_SESSION['user_id'])){
+        return True;
+    } else {
+        return False;
+    }
+}
+
+/**
+ * Destroys a session of a user
+ * @return array
+ */
+function logout_user() {
+    session_start();
+    if (session_destroy()) {
+        return [
+            'type' => 'success',
+            'message' => sprintf('You are succesfully logged out')
+        ];
+    } else {
+        return [
+            'type' => 'danger',
+            'message' => sprintf('Logout Failed')
+        ];
+    }
 }

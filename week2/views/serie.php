@@ -49,6 +49,7 @@
                         </tr>
                         </tbody>
                     </table>
+                    <?php if ($display_buttons) { ?>
                     <div class="row">
                         <div class="col-sm-2">
                             <a href="/DDWT18/week2/edit/?serie_id=<?= $serie_id ?>" role="button" class="btn btn-warning">Edit</a>
@@ -60,6 +61,7 @@
                             </form>
                         </div>
                     </div>
+                    <?php } ?>
 
                 </div>
 
